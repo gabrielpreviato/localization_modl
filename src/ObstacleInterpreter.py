@@ -22,6 +22,8 @@ class ObstaclesInterpreter(object):
             for obstacle in obstacles:
                 obstacle[1][4] *= correction_factor
 
+        return obstacles
+
     def network_pred_to_obstacles(self, prediction):
         def vec_sigmoid(x):
             return 1 / (1 + np.exp(-x))
