@@ -51,9 +51,9 @@ class ObstaclesInterpreter(object):
         detected_obstacles = []
         for i in range(prediction.shape[1]):
             if conf[i] > 0:
-                detected_obstacles.append([confidence_list[i], [x_pos[i], y_pos[i], ws[i], hs[i], mean[i], variance[i]]])
+                detected_obstacles.append([[confidence_list[i][0], confidence_list[i][1].object_class], [x_pos[i], y_pos[i], ws[i], hs[i], mean[i], variance[i]]])
 
-        return detected_obstacles
+        return np.array(detected_obstacles)
 
     @staticmethod
     def compute_correction_factor(obstacles, depth):

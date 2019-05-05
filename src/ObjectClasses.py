@@ -1,5 +1,7 @@
 class ObjectClasses(object):
     def __init__(self, object_class, number_classes):
+        self.object_class = object_class + (number_classes - 2) * 4
+
         if number_classes == 2 or number_classes == 3:
             if object_class == 0:
                 self.object = 'robot'
