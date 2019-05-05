@@ -30,7 +30,7 @@ class VrepConnection(object):
 
         if client_id == -1:
             # Connection failed
-            raise Exception("Failed to connect to server. Server IP: " + self.server_ip + ":" + self.server_port)
+            raise Exception("Failed to connect to server. Server IP: " + self.server_ip + ":" + str(self.server_port))
 
         return client_id
 
@@ -44,3 +44,14 @@ class VrepConnection(object):
             return handle
         else:
             raise Exception("Failed to get object handle. Object name: " + obj_name)
+
+    def load_scene(self, scene_dir, scene_name, absolute_path=True):
+        if absolute_path:
+            ret = vrep.simxLoadScene(self.client_id, scene_dir + scene_name, 0, vrep.simx_opmode_blocking)
+        else:
+            ret = vrep.simxLoadScene(self.client_id, scene_dir + scene_name, 1, vrep.simx_opmode_blocking)
+
+        if ret == vrep.simx_return_ok:
+            return
+        else:
+            raise Exception("Failed to load scene. Scene dir: " + scene_dir + ". Scene name: " + scene_name)

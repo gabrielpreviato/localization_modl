@@ -1,5 +1,8 @@
 import vrep.vrep as vrep
 import numpy as np
+import math
+
+from VrepConnection import VrepConnection
 
 
 class PoseGetter(object):
@@ -101,3 +104,13 @@ class PoseGetter(object):
         else:
             print('Possible started streaming orientation')
             return [0, 0, 0]
+
+
+if __name__ == '__main__':
+    vrep_connection = VrepConnection("127.0.0.1", 19997)
+    pose_getter = PoseGetter(vrep_connection, "NAO")
+
+    pose = pose_getter.get_pose()
+    pose[3:] *= 180 / math.pi
+
+    print(pose)
