@@ -3,7 +3,7 @@ import numpy as np
 
 
 class ParticleMap(object):
-    def __init__(self, width=900, height=600, objects=None, number_particles=500):
+    def __init__(self, width=900, height=600, objects=None, number_particles=500, prob_threshold=1e-10):
         self.width = width
         self.height = height
 
@@ -14,9 +14,11 @@ class ParticleMap(object):
 
         self.particles[:, 0] *= width
         self.particles[:, 1] *= height
-        self.particles[:, 2] = self.particles[:, 2] * 2 * math.pi - math.pi
+        # self.particles[:, 2] = self.particles[:, 2] * 2 * math.pi - math.pi
+        self.particles[:, 2] = (self.particles[:, 2] * 2 * math.pi - math.pi) / 2
 
         self.probs = np.ones((self.number_particles,))
+        self.prob_threshold = prob_threshold
 
     def update_movement(self, linear_mov, rotation, std):
         self.particles[:, 2] += rotation + np.random.rand(self.number_particles) * std[2]
@@ -47,18 +49,29 @@ class ParticleMap(object):
 
         for obs in observation:
             for obj in self.objects:
-                if obs[3] == obj[3]:
+                if obs[1] == obj[2] and obs[8] == obj[3]:
                     particle_dist = np.linalg.norm(self.particles[:, 0:2] - obj[0:2][None, ...], axis=1)
-                    diff = particle_dist - obs[0]
-                    variance = np.std(diff) / math.pow(self.number_particles, 1/3)
+                    diff = particle_dist - obs[6] * 100
+                    # variance = np.std(diff) / math.pow(self.number_particles, 1/3)
+                    variance = np.std(diff)
 
-                    self.probs = self.probs * self.gaussian_error(particle_dist, obs[0], variance)
-                    print(self.probs)
+                    self.probs = self.probs * self.gaussian_error(particle_dist, obs[6] * 100, variance)
+
+                    particles = np.random.rand(self.number_particles, 3)
+
+                    particles[:, 0] *= self.width
+                    particles[:, 1] *= self.height
+                    particles[:, 2] = particles[:, 2] * 2 * math.pi - math.pi
+
+                    self.particles[self.probs < self.prob_threshold] = particles[self.probs < self.prob_threshold]
+                    self.probs[self.probs < self.prob_threshold] = self.prob_threshold
+                    # print(self.probs)
                 else:
                     pass
 
         # Normalize probs
         self.probs /= np.sum(self.probs)
+        self.probs[self.probs == np.nan] = 0
 
         return
 
@@ -75,6 +88,12 @@ class ParticleMap(object):
 
         # Resample according to indexes
         self.particles = self.particles[indexes]
+
+    def get_prob_pose(self):
+        prob_x = np.sum(self.particles[:, 0] * self.probs)
+        prob_y = np.sum(self.particles[:, 1] * self.probs)
+
+        return prob_x, prob_y
 
 
 if __name__ == '__main__':

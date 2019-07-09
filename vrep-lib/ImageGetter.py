@@ -24,13 +24,13 @@ class ImageGetter(object):
 
     def get_image(self):
         if self.mode == 'buffering':
-            img, ret = self.get_image_vrep_buffering()
+            img, res = self.get_image_vrep_buffering()
         elif self.mode == 'blocking':
-            img, ret = self.get_image_vrep_blocking()
+            img, res = self.get_image_vrep_blocking()
         else:
             raise Exception("Method for mode '" + self.mode + "' not implemented.")
 
-        return self.vrep_image_to_np(img, ret)
+        return self.vrep_image_to_np(img, res)
 
     @staticmethod
     def vrep_image_to_np(image, resolution):
@@ -44,7 +44,7 @@ class ImageGetter(object):
                                                         vrep.simx_opmode_blocking)
 
         if ret == vrep.simx_return_ok:
-            return res, image
+            return image, res
         else:
             raise Exception("Failed to get vision sensor image. Vision sensor name: " + self.vision_sensor_name)
 
@@ -53,7 +53,7 @@ class ImageGetter(object):
                                                         vrep.simx_opmode_buffer)
 
         if ret == vrep.simx_return_ok:
-            return res, image
+            return image, res
         else:
             raise Exception("Failed to get vision sensor image. Vision sensor name: " + self.vision_sensor_name)
 
@@ -62,9 +62,9 @@ class ImageGetter(object):
                                                         vrep.simx_opmode_streaming)
         if ret == vrep.simx_return_ok:
             print('Started streaming image')
-            return res, image
+            return image, res
         elif ret == vrep.simx_return_remote_error_flag or ret == vrep.simx_return_local_error_flag:
             raise Exception("Failed to stream vision sensor image. Vision sensor name: " + self.vision_sensor_name)
         else:
             print('Possible started streaming image')
-            return [0, 0], []
+            return [], [0, 0]
