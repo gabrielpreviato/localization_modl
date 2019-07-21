@@ -775,7 +775,10 @@ def show_detections_multiclass(rgb, detection, gt=None, save=False, save_dir=Non
         rgb_new[:, :, 2] = rgb
         rgb = rgb_new
 
-    output = rgb.copy()
+    output = rgb.copy() * 255
+
+    output = np.asarray(output, dtype=np.uint8)
+
     det_obstacles_data = []
     gt_obstacles_data = []
 
@@ -787,7 +790,7 @@ def show_detections_multiclass(rgb, detection, gt=None, save=False, save_dir=Non
     if gt is not None:
         for obs in gt:
             cv2.rectangle(output, (int(obs.x), int(obs.y)), (int(obs.x) + int(obs.w), int(obs.y) + int(obs.h)),
-                          obs.class_obj.color, 2)
+                          obs.class_obj.color / 1, 2)
             gt_obstacles_data.append((obs.x, obs.y, obs.w, obs.h, obs.depth_mean, obs.depth_variance))
     if save:
         abs_save_dir = os.path.join(os.getcwd(), save_dir)

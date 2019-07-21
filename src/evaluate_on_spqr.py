@@ -1,4 +1,5 @@
 import cv2
+import csv
 import numpy as np
 import lib.EvaluationUtils as EvaluationUtils
 from config import get_config
@@ -16,8 +17,10 @@ from lib.SampleType import DepthObstacles_SingleFrame_Multiclass_4
 
 
 def preprocess_data_sqpr(rgb, w=256, h=160):
-    rgb = np.asarray(rgb, dtype=np.float32) / 255.
     rgb = cv2.resize(rgb, (w, h), cv2.INTER_LINEAR)
+
+    rgb = np.asarray(rgb, dtype=np.float32) / 255.
+
     rgb = np.expand_dims(rgb, 0)
 
     return rgb
@@ -286,6 +289,31 @@ true_obs = []
 pred_obs = []
 conf_mat = np.zeros((number_classes + 1, number_classes + 1), dtype=int)
 
+annotations = {}
+
+with open("/home/previato/Dropbox/IC/dataset/SPQR_Dataset/annotations.txt", "r") as annotations_file:
+    csv_file = csv.reader(annotations_file, delimiter=" ")
+
+    for line in csv_file:
+        if line[0] in annotations.keys():
+            annotations[line[0]].append(line[1:])
+        else:
+            annotations[line[0]] = [line[1:]]
+
+
+def spqr_str_to_class(string):
+    if string == 'nao':
+        return 0
+    elif string == 'ball':
+        return 1
+    elif string == 'goal':
+        return 2
+    else:
+        return -1
+
+SPQR_WIDTH = 640
+SPQR_HEIGHT = 480
+
 for test_dir in test_dirs:
     # depth_gt_paths = sorted(glob(os.path.join(dataset_main_dir, test_dir, 'depth', '*' + '.png')))
     rgb_paths = sorted(glob(os.path.join(dataset_main_dir, test_dir, '*' + '.png')))
@@ -293,6 +321,25 @@ for test_dir in test_dirs:
     # obs_paths = sorted(glob(os.path.join(dataset_main_dir, test_dir, 'obstacles_10m', '*' + '.txt')))
 
     for rgb_path in rgb_paths:
+        annotation = annotations[rgb_path.split("/")[-1]]
+
+        for obj in annotation:
+            obj[0] = int(obj[0])
+            obj[1] = int(obj[1])
+            obj[2] = int(obj[2])
+            obj[3] = int(obj[3])
+
+        gt_obj_classes = [spqr_str_to_class(obj[4]) for obj in annotation]
+        gt_obj_coords = [[int(obj[0]/SPQR_WIDTH*config.input_width), int(obj[1]/SPQR_HEIGHT*config.input_height),
+                          int((obj[2] - obj[0])/SPQR_WIDTH*config.input_width), int((obj[3] - obj[1])/SPQR_HEIGHT*config.input_height)]for obj in annotation]
+        gt_obj_depth = [[0, 0] for obj in annotation]
+
+        obs = [list(a) for a in zip(gt_obj_coords, gt_obj_depth, gt_obj_classes)]
+        if model_name == 'odl':
+            for ob in obs:
+                ob[2] = Classes.generate_class(ob[2])
+
+            gt_obs = EvaluationUtils.get_obstacles_from_list_multiclass(obs)
 
         rgb_raw = cv2.imread(rgb_path)
 
@@ -307,7 +354,7 @@ for test_dir in test_dirs:
         rgb = preprocess_data_sqpr(rgb_raw, w=config.input_width, h=config.input_height)
 
         #Forward pass to the net
-        results = model.run(rgb)
+        results = model.run(rgb.copy())
 
         # #Get obstacles from GT segmentation and depth
         # #gt_obs = EvaluationUtils.get_obstacles_from_seg_and_depth(gt, seg, segm_thr=-1)
@@ -350,7 +397,7 @@ for test_dir in test_dirs:
         if showImages:
             if results[1] is not None:
                 if model_name == 'odl':
-                    EvaluationUtils.show_detections_multiclass(rgb, results[1], save=True, save_dir="save_"+str(number_classes)+"_real",
+                    EvaluationUtils.show_detections_multiclass(rgb, results[1], gt=gt_obs, save=True, save_dir="save_"+str(number_classes)+"_real",
                                                     file_name="sav_" + str(i) + ".png", sleep_for=10, multiclass=number_classes)
                 else:
                     EvaluationUtils.show_detections(rgb, results[1], save=True, save_dir="save", file_name="sav_"+ str(i) +".png", sleep_for=10)
